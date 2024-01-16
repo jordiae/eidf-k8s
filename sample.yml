@@ -4,4 +4,6 @@ env_vars:
   HF_TOKEN:
     secret_name: hl-secrets
     key: hf-token
-
+  GITHUB_TOKEN:
+    secret_name: gb-secrets
+    key: github-token
