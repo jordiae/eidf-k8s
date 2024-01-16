@@ -20,6 +20,9 @@ def argument_parser():
     parser.add_argument("--gpu-type", type=str, default=None)
     parser.add_argument("--gpu-limit", type=int, default=None)
     parser.add_argument("--namespace", type=str, default="informatics")
+    parser.add_argument("--repo", type=str)
+    parser.add_argument("--branch", type=str)
+    parser.add_argument("--cmd", type=str)
     args = parser.parse_args()
     return args
 
@@ -36,20 +39,21 @@ def main():
                 "apt-get -y install git-lfs unzip psmisc wget git python3 python-is-python3 pip bc htop nano && " \
                 "git lfs install && " \
                 "pip install -U pip && " \
-                "git clone https://huggingface.co/spaces/hallucinations-leaderboard/leaderboard && " \
-                "cd leaderboard && " \
+                f"GITHUB_TOKEN=$GITHUB_TOKEN git clone {args.repo} && " \
+                f"cd {args.repo} && " \
+                f"cd {args.branch} && " \
+                "bash setup.sh && " \
                 "pip install --root-user-action=ignore -U -r requirements.txt && " \
                 "pip install --root-user-action=ignore -U protobuf && " \
                 "pip install --root-user-action=ignore -U auto-gptq optimum autoawq && " \
-                "python -m spacy download en_core_web_sm && " \
-                "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python HF_TOKEN=$HF_TOKEN H4_TOKEN=$HF_TOKEN " \
+                "PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python HF_TOKEN=$HF_TOKEN H4_TOKEN=$HF_TOKEN GITHUB_TOKEN=$GITHUB_TOKEN" \
                 "HF_HUB_DISABLE_PROGRESS_BARS=1 CURL_CA_BUNDLE=\"\" "
-        command = "python backend-cli.py"
+        command = args.cmd #"python backend-cli.py"
 
         secret_env_vars = configs["env_vars"]
 
         # Create a Kubernetes Job with a name, container image, and command
-        print(f"Creating job for: {command}")
+        print(f"Creating job for: {args.repo}:{args.branch}:{command}")
         job = KubernetesJob(name=job_name,
                             image="nvcr.io/nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04",
                             gpu_type="nvidia.com/gpu",
@@ -59,7 +63,7 @@ def main():
                             command=["/bin/bash", "-c", "--"],
                             args=[base_args + command],
                             secret_env_vars=secret_env_vars,
-                            user_email="p.minervini@ed.ac.uk")
+                            user_email="jordi." + "armengol." + "estape" + "@ed.ac.uk")
 
         # Run the Job on the Kubernetes cluster
         job.run()
